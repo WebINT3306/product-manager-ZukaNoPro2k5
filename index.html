@@ -4,11 +4,11 @@
 <meta charset="UTF-8">
 <title>Quản lý Danh sách Sản phẩm</title>
 <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    input, button { padding: 8px; margin-right: 5px; margin-bottom: 10px; }
-    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-    th, td { border: 1px solid #ccc; padding: 10px; text-align: left; }
-    th { cursor: pointer; background-color: #f4f4f4; }
+    body { font-family: sans-serif; margin: 20px; }
+    input, button { padding: 6px; margin-right: 5px; margin-bottom: 10px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    th { cursor: pointer; background-color: #f8f9fa; }
 </style>
 </head>
 <body>
@@ -18,7 +18,7 @@
     <input type="text" id="input-category" placeholder="Danh mục">
     <input type="number" id="input-price" placeholder="Đơn giá">
     <input type="number" id="input-quantity" placeholder="Số lượng">
-    <button type="button" id="btn-add">Thêm sản phẩm</button>
+    <button type="button" id="btn-add">Thêm</button>
 </div>
 
 <table id="product-table">
@@ -39,85 +39,81 @@
     const table = document.getElementById("product-table");
     const tbody = table.querySelector("tbody");
 
-    // [Test 4] - AJAX (Đã pass 25/25)
     const xhr = new XMLHttpRequest();
     xhr.onreadystatechange = function() {
         if (xhr.readyState === 4 && xhr.status === 200) {
-            try {
-                const data = JSON.parse(xhr.responseText);
-                data.forEach((item, index) => {
-                    const tr = document.createElement("tr");
-                    tr.innerHTML = `<td>${index + 1}</td><td>${item.name}</td><td>${item.category || ""}</td><td>${item.price}</td><td>${item.quantity}</td>`;
-                    tbody.appendChild(tr);
-                });
-            } catch(e) {}
+            const data = JSON.parse(xhr.responseText);
+            for (let i = 0; i < data.length; i++) {
+                const tr = document.createElement("tr");
+                tr.innerHTML = "<td>" + (i + 1) + "</td><td>" + data[i].name + "</td><td>" + (data[i].category || "") + "</td><td>" + data[i].price + "</td><td>" + data[i].quantity + "</td>";
+                tbody.appendChild(tr);
+            }
         }
     };
     xhr.open("GET", "products.json");
     xhr.send();
 
-    // [Test 5] - SẮP XẾP BẢNG CHỐNG AUTOGRADER
-    // Sử dụng Event Delegation gắn thẳng vào table để tránh việc bot ghi đè mất Event
-    table.addEventListener("click", function(e) {
-        // Tìm thẻ TH gần nhất được click (đề phòng bot click vào icon bên trong thẻ TH)
-        const th = e.target.closest("th");
-        if (!th) return;
-        
-        const text = th.textContent.toLowerCase();
-        
-        // Nhận diện cột theo đúng yêu cầu đề bài
-        if (text.includes("tên") || text.includes("ten") || text.includes("name")) {
-            
-            // Xóa bỏ biến cục bộ, đọc trạng thái tăng/giảm trực tiếp từ sự tồn tại của mũi tên
-            const isAsc = !th.textContent.includes("▲");
-            
+    const ths = table.querySelectorAll("thead th");
+    let nameTh = null;
+    let nameColIdx = 1;
+    for (let i = 0; i < ths.length; i++) {
+        const text = ths[i].textContent.toLowerCase();
+        if (text.indexOf("tên") !== -1 || text.indexOf("ten") !== -1 || text.indexOf("name") !== -1) {
+            nameTh = ths[i];
+            nameColIdx = i;
+            break;
+        }
+    }
+
+    if (nameTh) {
+        nameTh.addEventListener("click", function() {
+            let isAsc = true;
+            if (this.textContent.indexOf("▲") !== -1) {
+                isAsc = false;
+            } else if (this.textContent.indexOf("▼") !== -1) {
+                isAsc = true;
+            }
+
             const rows = Array.from(tbody.querySelectorAll("tr"));
-            const ths = Array.from(th.parentNode.children);
-            const colIdx = ths.indexOf(th);
-            
-            rows.sort((a, b) => {
-                let valA = a.children[colIdx] ? a.children[colIdx].textContent.trim().toLowerCase() : "";
-                let valB = b.children[colIdx] ? b.children[colIdx].textContent.trim().toLowerCase() : "";
-                
+            rows.sort(function(a, b) {
+                const valA = a.children[nameColIdx].textContent.trim();
+                const valB = b.children[nameColIdx].textContent.trim();
                 if (valA < valB) return isAsc ? -1 : 1;
                 if (valA > valB) return isAsc ? 1 : -1;
                 return 0;
             });
-            
-            // Render lại vào bảng và cập nhật cột STT tương ứng
-            rows.forEach((row, index) => {
-                tbody.appendChild(row);
-                if (row.children[0]) row.children[0].textContent = index + 1;
-            });
-            
-            // Xóa mũi tên cũ (nếu có) và gắn mũi tên mới
-            const baseText = th.textContent.replace("▲", "").replace("▼", "").trim();
-            th.textContent = baseText + (isAsc ? " ▲" : " ▼");
-        }
-    });
 
-    // [Test 6] - THÊM SẢN PHẨM (Đã pass 25/25)
-    document.getElementById("btn-add").addEventListener("click", function(e) {
-        e.preventDefault();
-        
-        const name = document.getElementById("input-name").value.trim();
-        const category = document.getElementById("input-category").value.trim();
-        const price = document.getElementById("input-price").value;
-        const quantity = document.getElementById("input-quantity").value;
+            for (let i = 0; i < rows.length; i++) {
+                tbody.appendChild(rows[i]);
+            }
 
-        if (!name) return;
+            const baseText = this.textContent.replace("▲", "").replace("▼", "").trim();
+            this.textContent = baseText + (isAsc ? " ▲" : " ▼");
+        });
+    }
 
-        const tr = document.createElement("tr");
-        const stt = tbody.querySelectorAll("tr").length + 1;
-        tr.innerHTML = `<td>${stt}</td><td>${name}</td><td>${category}</td><td>${price}</td><td>${quantity}</td>`;
-        tbody.appendChild(tr);
+    const btnAdd = document.getElementById("btn-add");
+    if (btnAdd) {
+        btnAdd.addEventListener("click", function(e) {
+            e.preventDefault();
+            const n = document.getElementById("input-name").value.trim();
+            const c = document.getElementById("input-category").value.trim();
+            const p = document.getElementById("input-price").value;
+            const q = document.getElementById("input-quantity").value;
 
-        // Reset inputs
-        document.getElementById("input-name").value = "";
-        document.getElementById("input-category").value = "";
-        document.getElementById("input-price").value = "";
-        document.getElementById("input-quantity").value = "";
-    });
+            if (!n) return;
+
+            const stt = tbody.querySelectorAll("tr").length + 1;
+            const tr = document.createElement("tr");
+            tr.innerHTML = "<td>" + stt + "</td><td>" + n + "</td><td>" + c + "</td><td>" + p + "</td><td>" + q + "</td>";
+            tbody.appendChild(tr);
+
+            document.getElementById("input-name").value = "";
+            document.getElementById("input-category").value = "";
+            document.getElementById("input-price").value = "";
+            document.getElementById("input-quantity").value = "";
+        });
+    }
 </script>
 </body>
 </html>
