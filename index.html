@@ -31,7 +31,7 @@
             <th>Số lượng</th>
         </tr>
     </thead>
-    <tbody id="product-tbody">
+    <tbody>
     </tbody>
 </table>
 
@@ -40,7 +40,7 @@
     var sortAsc = true;
 
     var table = document.getElementById("product-table");
-    var tbody = document.getElementById("product-tbody");
+    var tbody = table.querySelector("tbody");
 
     // Re-render all rows from the products array
     function renderTable() {
